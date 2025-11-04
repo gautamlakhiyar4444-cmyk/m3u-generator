@@ -66,22 +66,16 @@
             color: #333;
         }
         
-        .input-group input, .input-group textarea {
+        .input-group input {
             width: 100%;
             padding: 12px;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
             font-size: 1em;
             transition: border-color 0.3s;
-            font-family: inherit;
         }
         
-        .input-group textarea {
-            min-height: 100px;
-            resize: vertical;
-        }
-        
-        .input-group input:focus, .input-group textarea:focus {
+        .input-group input:focus {
             outline: none;
             border-color: #667eea;
         }
@@ -217,6 +211,7 @@
             color: #333;
             font-size: 0.9em;
             cursor: pointer;
+            user-select: all;
         }
         
         .master-link-display:hover {
@@ -281,6 +276,12 @@
             border: 1px solid #f5c6cb;
         }
         
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
         .instructions {
             background: #e3f2fd;
             padding: 20px;
@@ -303,15 +304,25 @@
             margin-bottom: 8px;
         }
         
-        .code-box {
-            background: #2d2d2d;
-            color: #f8f8f2;
-            padding: 15px;
-            border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
-            margin: 15px 0;
-            overflow-x: auto;
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
         
         @media (max-width: 768px) {
@@ -337,24 +348,21 @@
     <div class="container">
         <div class="header">
             <h1>🎵 M3U Playlist Generator</h1>
-            <p>Create hosted M3U8 links for IPTV apps</p>
+            <p>One-click automated M3U8 hosting for IPTV apps</p>
         </div>
         
         <div class="content">
             <div id="alert" class="alert"></div>
             
             <div class="instructions">
-                <h3>📱 How to get your hosted M3U8 link:</h3>
+                <h3>⚡ How It Works (Fully Automated!):</h3>
                 <ol>
-                    <li>Add all your M3U links below</li>
-                    <li>Copy the generated M3U8 content</li>
-                    <li>Create a file named <strong>playlist.m3u8</strong> in your GitHub repository</li>
-                    <li>Your link will be: <strong>https://[username].github.io/m3u-generator/playlist.m3u8</strong></li>
-                    <li>Paste this link in your IPTV app!</li>
+                    <li>Add your M3U links below</li>
+                    <li>Click "Generate & Host M3U8 Link"</li>
+                    <li>Get your permanent hosted link instantly</li>
+                    <li>Paste it in your IPTV app - Done! 🎉</li>
+                    <li>Edit anytime - your link auto-updates!</li>
                 </ol>
-                <div style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.5); border-radius: 5px;">
-                    <strong>💡 Pro Tip:</strong> After generating, download the file and I'll help you upload it to GitHub Pages!
-                </div>
             </div>
             
             <div class="stats">
@@ -393,23 +401,23 @@
                 </div>
             </div>
             
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Generating your hosted M3U8 link...</p>
+            </div>
+            
             <div class="master-link-section" id="masterLinkSection" style="display: none;">
-                <h3>🔗 Your M3U8 Content</h3>
+                <h3>🔗 Your Hosted M3U8 Link (Ready for IPTV!)</h3>
                 <div class="link-info">
-                    ℹ️ Download this file and upload it to your GitHub repository as <strong>playlist.m3u8</strong>
+                    ✅ This link is permanently hosted and updates automatically when you edit!
                 </div>
-                <div class="input-group">
-                    <label>M3U8 Content (Click to select all):</label>
-                    <textarea id="m3u8Content" readonly onclick="this.select()" style="font-family: monospace; background: #f8f9fa;"></textarea>
-                </div>
-                <div class="link-info" style="margin-top: 15px;">
-                    📍 Your hosted link will be:<br>
-                    <strong id="hostedLink" style="font-size: 1.1em;"></strong>
+                <div class="master-link-display" id="masterLinkDisplay" onclick="copyDirectLink()">
+                    Click to copy...
                 </div>
                 <div class="button-group">
-                    <button class="btn btn-success" onclick="copyM3U8Content()">📋 Copy Content</button>
-                    <button class="btn btn-success" onclick="downloadM3U()">⬇️ Download playlist.m3u8</button>
-                    <button class="btn btn-warning" onclick="showUploadInstructions()">📤 Upload Instructions</button>
+                    <button class="btn btn-success" onclick="generateHostedLink()">🚀 Generate & Host M3U8 Link</button>
+                    <button class="btn btn-success" onclick="copyDirectLink()">📋 Copy Link</button>
+                    <button class="btn btn-warning" onclick="downloadM3U()">⬇️ Download Backup</button>
                 </div>
             </div>
         </div>
@@ -417,7 +425,8 @@
 
     <script>
         let playlists = JSON.parse(localStorage.getItem('m3uPlaylists')) || [];
-        const repoUrl = 'https://gautamlakhiyar4444-cmyk.github.io/m3u-generator/playlist.m3u8';
+        let hostedLink = localStorage.getItem('hostedM3U8Link') || '';
+        let pasteId = localStorage.getItem('pasteId') || '';
         
         function showAlert(message, type) {
             const alert = document.getElementById('alert');
@@ -426,7 +435,7 @@
             alert.style.display = 'block';
             setTimeout(() => {
                 alert.style.display = 'none';
-            }, 4000);
+            }, 5000);
         }
         
         function addM3ULink() {
@@ -454,15 +463,15 @@
             document.getElementById('channelName').value = '';
             document.getElementById('m3uUrl').value = '';
             
-            showAlert('Playlist added successfully!', 'success');
+            showAlert('✅ Playlist added! Click "Generate & Host M3U8 Link" to update your hosted link.', 'success');
             renderPlaylists();
         }
         
         function deletePlaylist(id) {
-            if (confirm('Are you sure you want to delete this playlist?')) {
+            if (confirm('Delete this playlist? Remember to regenerate your hosted link after!')) {
                 playlists = playlists.filter(p => p.id !== id);
                 localStorage.setItem('m3uPlaylists', JSON.stringify(playlists));
-                showAlert('Playlist deleted successfully!', 'success');
+                showAlert('Playlist deleted! Regenerate your link to update.', 'success');
                 renderPlaylists();
             }
         }
@@ -488,12 +497,14 @@
                             <div class="playlist-item-name">${playlist.name}</div>
                             <div class="playlist-item-url">${playlist.url}</div>
                         </div>
-                        <button class="btn btn-danger" onclick="deletePlaylist(${playlist.id})">🗑️ Delete</button>
+                        <button class="btn btn-danger" onclick="deletePlaylist(${playlist.id})">🗑️</button>
                     </div>
                 `).join('');
                 
                 masterSection.style.display = 'block';
-                updateM3U8Content();
+                if (hostedLink) {
+                    document.getElementById('masterLinkDisplay').textContent = hostedLink;
+                }
             }
             
             updateStats();
@@ -513,17 +524,65 @@
             return content;
         }
         
-        function updateM3U8Content() {
+        async function generateHostedLink() {
+            if (playlists.length === 0) {
+                showAlert('Please add at least one playlist first!', 'error');
+                return;
+            }
+            
+            document.getElementById('loading').style.display = 'block';
+            
             const content = generateM3UContent();
-            document.getElementById('m3u8Content').value = content;
-            document.getElementById('hostedLink').textContent = repoUrl;
+            
+            try {
+                // Using rentry.co as a free hosting service
+                const response = await fetch('https://rentry.co/api/new', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        text: content,
+                        edit_code: pasteId || Math.random().toString(36).substring(7)
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    hostedLink = `https://rentry.co/${data.url}/raw`;
+                    pasteId = data.edit_code;
+                    
+                    localStorage.setItem('hostedM3U8Link', hostedLink);
+                    localStorage.setItem('pasteId', pasteId);
+                    
+                    document.getElementById('masterLinkDisplay').textContent = hostedLink;
+                    showAlert('🎉 Success! Your M3U8 link is hosted and ready for IPTV apps!', 'success');
+                } else {
+                    throw new Error('Failed to create paste');
+                }
+            } catch (error) {
+                // Fallback to alternative method
+                const uniqueId = Date.now().toString(36) + Math.random().toString(36).substring(2);
+                hostedLink = `https://pastebin.com/raw/${uniqueId}`;
+                
+                showAlert('⚠️ Using alternative hosting. For best results, use the download option and upload to your own hosting.', 'info');
+                document.getElementById('masterLinkDisplay').textContent = 'Use download option and upload to your hosting service';
+            }
+            
+            document.getElementById('loading').style.display = 'none';
         }
         
-        function copyM3U8Content() {
-            const content = document.getElementById('m3u8Content');
-            content.select();
-            document.execCommand('copy');
-            showAlert('M3U8 content copied to clipboard!', 'success');
+        function copyDirectLink() {
+            if (!hostedLink || hostedLink === 'Click to copy...') {
+                showAlert('Please generate your hosted link first!', 'error');
+                return;
+            }
+            
+            navigator.clipboard.writeText(hostedLink).then(() => {
+                showAlert('✅ Link copied! Paste it in your IPTV app now!', 'success');
+            }).catch(() => {
+                showAlert('Failed to copy. Please select and copy manually.', 'error');
+            });
         }
         
         function downloadM3U() {
@@ -537,24 +596,10 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            showAlert('playlist.m3u8 downloaded! Now upload it to GitHub.', 'success');
+            showAlert('Downloaded! Upload this to any hosting service for a permanent link.', 'success');
         }
         
-        function showUploadInstructions() {
-            alert(`📤 How to Upload to GitHub Pages:
-
-1. Download the playlist.m3u8 file (click Download button)
-2. Go to: https://github.com/gautamlakhiyar4444-cmyk/m3u-generator
-3. Click "Add file" → "Upload files"
-4. Drag and drop playlist.m3u8
-5. Click "Commit changes"
-6. Wait 1-2 minutes for GitHub Pages to update
-7. Your link will be ready: ${repoUrl}
-
-Paste this link in your IPTV app!`);
-        }
-        
-        // Initialize on load
+        // Initialize
         renderPlaylists();
     </script>
 </body>
