@@ -66,16 +66,22 @@
             color: #333;
         }
         
-        .input-group input {
+        .input-group input, .input-group textarea {
             width: 100%;
             padding: 12px;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
             font-size: 1em;
             transition: border-color 0.3s;
+            font-family: inherit;
         }
         
-        .input-group input:focus {
+        .input-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .input-group input:focus, .input-group textarea:focus {
             outline: none;
             border-color: #667eea;
         }
@@ -210,8 +216,11 @@
             font-family: monospace;
             color: #333;
             font-size: 0.9em;
-            max-height: 100px;
-            overflow-y: auto;
+            cursor: pointer;
+        }
+        
+        .master-link-display:hover {
+            background: rgba(255,255,255,1);
         }
         
         .link-info {
@@ -294,6 +303,17 @@
             margin-bottom: 8px;
         }
         
+        .code-box {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        
         @media (max-width: 768px) {
             .stats {
                 flex-direction: column;
@@ -317,21 +337,24 @@
     <div class="container">
         <div class="header">
             <h1>🎵 M3U Playlist Generator</h1>
-            <p>Create direct M3U8 links for IPTV apps</p>
+            <p>Create hosted M3U8 links for IPTV apps</p>
         </div>
         
         <div class="content">
             <div id="alert" class="alert"></div>
             
             <div class="instructions">
-                <h3>📱 How to use with IPTV Apps:</h3>
+                <h3>📱 How to get your hosted M3U8 link:</h3>
                 <ol>
-                    <li>Add your M3U links below</li>
-                    <li>Click "Generate M3U8 Link"</li>
-                    <li>Copy the generated link</li>
-                    <li>Paste it directly in your IPTV app (TiviMate, IPTV Smarters, etc.)</li>
-                    <li>Your playlist will update automatically when you edit it here!</li>
+                    <li>Add all your M3U links below</li>
+                    <li>Copy the generated M3U8 content</li>
+                    <li>Create a file named <strong>playlist.m3u8</strong> in your GitHub repository</li>
+                    <li>Your link will be: <strong>https://[username].github.io/m3u-generator/playlist.m3u8</strong></li>
+                    <li>Paste this link in your IPTV app!</li>
                 </ol>
+                <div style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.5); border-radius: 5px;">
+                    <strong>💡 Pro Tip:</strong> After generating, download the file and I'll help you upload it to GitHub Pages!
+                </div>
             </div>
             
             <div class="stats">
@@ -371,15 +394,22 @@
             </div>
             
             <div class="master-link-section" id="masterLinkSection" style="display: none;">
-                <h3>🔗 Your Direct M3U8 Link for IPTV Apps</h3>
+                <h3>🔗 Your M3U8 Content</h3>
                 <div class="link-info">
-                    ℹ️ Copy this link and paste it directly in your IPTV app
+                    ℹ️ Download this file and upload it to your GitHub repository as <strong>playlist.m3u8</strong>
                 </div>
-                <div class="master-link-display" id="masterLinkDisplay"></div>
+                <div class="input-group">
+                    <label>M3U8 Content (Click to select all):</label>
+                    <textarea id="m3u8Content" readonly onclick="this.select()" style="font-family: monospace; background: #f8f9fa;"></textarea>
+                </div>
+                <div class="link-info" style="margin-top: 15px;">
+                    📍 Your hosted link will be:<br>
+                    <strong id="hostedLink" style="font-size: 1.1em;"></strong>
+                </div>
                 <div class="button-group">
-                    <button class="btn btn-success" onclick="copyDirectLink()">📋 Copy Direct Link</button>
-                    <button class="btn btn-warning" onclick="generateM3U8Link()">🔄 Generate New Link</button>
-                    <button class="btn btn-success" onclick="downloadM3U()">⬇️ Download M3U File</button>
+                    <button class="btn btn-success" onclick="copyM3U8Content()">📋 Copy Content</button>
+                    <button class="btn btn-success" onclick="downloadM3U()">⬇️ Download playlist.m3u8</button>
+                    <button class="btn btn-warning" onclick="showUploadInstructions()">📤 Upload Instructions</button>
                 </div>
             </div>
         </div>
@@ -387,7 +417,7 @@
 
     <script>
         let playlists = JSON.parse(localStorage.getItem('m3uPlaylists')) || [];
-        let directLink = localStorage.getItem('directM3U8Link') || '';
+        const repoUrl = 'https://gautamlakhiyar4444-cmyk.github.io/m3u-generator/playlist.m3u8';
         
         function showAlert(message, type) {
             const alert = document.getElementById('alert');
@@ -396,7 +426,7 @@
             alert.style.display = 'block';
             setTimeout(() => {
                 alert.style.display = 'none';
-            }, 3000);
+            }, 4000);
         }
         
         function addM3ULink() {
@@ -426,7 +456,6 @@
             
             showAlert('Playlist added successfully!', 'success');
             renderPlaylists();
-            generateM3U8Link();
         }
         
         function deletePlaylist(id) {
@@ -435,9 +464,6 @@
                 localStorage.setItem('m3uPlaylists', JSON.stringify(playlists));
                 showAlert('Playlist deleted successfully!', 'success');
                 renderPlaylists();
-                if (playlists.length > 0) {
-                    generateM3U8Link();
-                }
             }
         }
         
@@ -467,9 +493,7 @@
                 `).join('');
                 
                 masterSection.style.display = 'block';
-                if (directLink) {
-                    document.getElementById('masterLinkDisplay').textContent = directLink;
-                }
+                updateM3U8Content();
             }
             
             updateStats();
@@ -481,62 +505,57 @@
         }
         
         function generateM3UContent() {
-            let content = '#EXTM3U\n\n';
+            let content = '#EXTM3U\n';
             playlists.forEach(playlist => {
                 content += `#EXTINF:-1,${playlist.name}\n`;
-                content += `${playlist.url}\n\n`;
+                content += `${playlist.url}\n`;
             });
             return content;
         }
         
-        function generateM3U8Link() {
-            if (playlists.length === 0) {
-                showAlert('Please add at least one playlist first', 'error');
-                return;
-            }
-            
+        function updateM3U8Content() {
             const content = generateM3UContent();
-            const encoded = btoa(unescape(encodeURIComponent(content)));
-            const dataUrl = `data:application/x-mpegurl;base64,${encoded}`;
-            
-            directLink = dataUrl;
-            localStorage.setItem('directM3U8Link', directLink);
-            
-            document.getElementById('masterLinkDisplay').textContent = directLink;
-            showAlert('Direct M3U8 link generated! Copy and paste it in your IPTV app', 'success');
+            document.getElementById('m3u8Content').value = content;
+            document.getElementById('hostedLink').textContent = repoUrl;
         }
         
-        function copyDirectLink() {
-            if (!directLink) {
-                generateM3U8Link();
-            }
-            
-            navigator.clipboard.writeText(directLink).then(() => {
-                showAlert('Direct link copied! Paste it in your IPTV app', 'success');
-            }).catch(() => {
-                showAlert('Failed to copy to clipboard', 'error');
-            });
+        function copyM3U8Content() {
+            const content = document.getElementById('m3u8Content');
+            content.select();
+            document.execCommand('copy');
+            showAlert('M3U8 content copied to clipboard!', 'success');
         }
         
         function downloadM3U() {
             const content = generateM3UContent();
-            const blob = new Blob([content], { type: 'application/x-mpegurl' });
+            const blob = new Blob([content], { type: 'application/vnd.apple.mpegurl' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'master-playlist.m3u8';
+            a.download = 'playlist.m3u8';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            showAlert('M3U8 file downloaded successfully!', 'success');
+            showAlert('playlist.m3u8 downloaded! Now upload it to GitHub.', 'success');
+        }
+        
+        function showUploadInstructions() {
+            alert(`📤 How to Upload to GitHub Pages:
+
+1. Download the playlist.m3u8 file (click Download button)
+2. Go to: https://github.com/gautamlakhiyar4444-cmyk/m3u-generator
+3. Click "Add file" → "Upload files"
+4. Drag and drop playlist.m3u8
+5. Click "Commit changes"
+6. Wait 1-2 minutes for GitHub Pages to update
+7. Your link will be ready: ${repoUrl}
+
+Paste this link in your IPTV app!`);
         }
         
         // Initialize on load
         renderPlaylists();
-        if (playlists.length > 0 && !directLink) {
-            generateM3U8Link();
-        }
     </script>
 </body>
 </html>
