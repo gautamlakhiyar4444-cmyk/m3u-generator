@@ -311,4 +311,232 @@
                 width: 100%;
             }
         }
-    
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎵 M3U Playlist Generator</h1>
+            <p>Create direct M3U8 links for IPTV apps</p>
+        </div>
+        
+        <div class="content">
+            <div id="alert" class="alert"></div>
+            
+            <div class="instructions">
+                <h3>📱 How to use with IPTV Apps:</h3>
+                <ol>
+                    <li>Add your M3U links below</li>
+                    <li>Click "Generate M3U8 Link"</li>
+                    <li>Copy the generated link</li>
+                    <li>Paste it directly in your IPTV app (TiviMate, IPTV Smarters, etc.)</li>
+                    <li>Your playlist will update automatically when you edit it here!</li>
+                </ol>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalChannels">0</div>
+                    <div class="stat-label">Total Channels</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalPlaylists">0</div>
+                    <div class="stat-label">Playlists Added</div>
+                </div>
+            </div>
+            
+            <div class="input-section">
+                <h2 style="margin-bottom: 20px; color: #333;">Add M3U Link</h2>
+                <div class="input-group">
+                    <label for="channelName">Channel/Playlist Name</label>
+                    <input type="text" id="channelName" placeholder="e.g., Sports Channels, Movies, etc.">
+                </div>
+                <div class="input-group">
+                    <label for="m3uUrl">M3U URL</label>
+                    <input type="url" id="m3uUrl" placeholder="https://example.com/playlist.m3u">
+                </div>
+                <button class="btn btn-primary" onclick="addM3ULink()">➕ Add to Playlist</button>
+            </div>
+            
+            <div class="playlist-section">
+                <h2>📋 Your Playlists</h2>
+                <div class="playlist-items" id="playlistItems">
+                    <div class="empty-state">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
+                        </svg>
+                        <p>No playlists added yet. Add your first M3U link above!</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="master-link-section" id="masterLinkSection" style="display: none;">
+                <h3>🔗 Your Direct M3U8 Link for IPTV Apps</h3>
+                <div class="link-info">
+                    ℹ️ Copy this link and paste it directly in your IPTV app
+                </div>
+                <div class="master-link-display" id="masterLinkDisplay"></div>
+                <div class="button-group">
+                    <button class="btn btn-success" onclick="copyDirectLink()">📋 Copy Direct Link</button>
+                    <button class="btn btn-warning" onclick="generateM3U8Link()">🔄 Generate New Link</button>
+                    <button class="btn btn-success" onclick="downloadM3U()">⬇️ Download M3U File</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let playlists = JSON.parse(localStorage.getItem('m3uPlaylists')) || [];
+        let directLink = localStorage.getItem('directM3U8Link') || '';
+        
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            alert.style.display = 'block';
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 3000);
+        }
+        
+        function addM3ULink() {
+            const name = document.getElementById('channelName').value.trim();
+            const url = document.getElementById('m3uUrl').value.trim();
+            
+            if (!name || !url) {
+                showAlert('Please fill in both fields', 'error');
+                return;
+            }
+            
+            if (!url.match(/^https?:\/\/.+/)) {
+                showAlert('Please enter a valid URL', 'error');
+                return;
+            }
+            
+            playlists.push({
+                id: Date.now(),
+                name: name,
+                url: url
+            });
+            
+            localStorage.setItem('m3uPlaylists', JSON.stringify(playlists));
+            
+            document.getElementById('channelName').value = '';
+            document.getElementById('m3uUrl').value = '';
+            
+            showAlert('Playlist added successfully!', 'success');
+            renderPlaylists();
+            generateM3U8Link();
+        }
+        
+        function deletePlaylist(id) {
+            if (confirm('Are you sure you want to delete this playlist?')) {
+                playlists = playlists.filter(p => p.id !== id);
+                localStorage.setItem('m3uPlaylists', JSON.stringify(playlists));
+                showAlert('Playlist deleted successfully!', 'success');
+                renderPlaylists();
+                if (playlists.length > 0) {
+                    generateM3U8Link();
+                }
+            }
+        }
+        
+        function renderPlaylists() {
+            const container = document.getElementById('playlistItems');
+            const masterSection = document.getElementById('masterLinkSection');
+            
+            if (playlists.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
+                        </svg>
+                        <p>No playlists added yet. Add your first M3U link above!</p>
+                    </div>
+                `;
+                masterSection.style.display = 'none';
+            } else {
+                container.innerHTML = playlists.map(playlist => `
+                    <div class="playlist-item">
+                        <div class="playlist-item-info">
+                            <div class="playlist-item-name">${playlist.name}</div>
+                            <div class="playlist-item-url">${playlist.url}</div>
+                        </div>
+                        <button class="btn btn-danger" onclick="deletePlaylist(${playlist.id})">🗑️ Delete</button>
+                    </div>
+                `).join('');
+                
+                masterSection.style.display = 'block';
+                if (directLink) {
+                    document.getElementById('masterLinkDisplay').textContent = directLink;
+                }
+            }
+            
+            updateStats();
+        }
+        
+        function updateStats() {
+            document.getElementById('totalPlaylists').textContent = playlists.length;
+            document.getElementById('totalChannels').textContent = playlists.length;
+        }
+        
+        function generateM3UContent() {
+            let content = '#EXTM3U\n\n';
+            playlists.forEach(playlist => {
+                content += `#EXTINF:-1,${playlist.name}\n`;
+                content += `${playlist.url}\n\n`;
+            });
+            return content;
+        }
+        
+        function generateM3U8Link() {
+            if (playlists.length === 0) {
+                showAlert('Please add at least one playlist first', 'error');
+                return;
+            }
+            
+            const content = generateM3UContent();
+            const encoded = btoa(unescape(encodeURIComponent(content)));
+            const dataUrl = `data:application/x-mpegurl;base64,${encoded}`;
+            
+            directLink = dataUrl;
+            localStorage.setItem('directM3U8Link', directLink);
+            
+            document.getElementById('masterLinkDisplay').textContent = directLink;
+            showAlert('Direct M3U8 link generated! Copy and paste it in your IPTV app', 'success');
+        }
+        
+        function copyDirectLink() {
+            if (!directLink) {
+                generateM3U8Link();
+            }
+            
+            navigator.clipboard.writeText(directLink).then(() => {
+                showAlert('Direct link copied! Paste it in your IPTV app', 'success');
+            }).catch(() => {
+                showAlert('Failed to copy to clipboard', 'error');
+            });
+        }
+        
+        function downloadM3U() {
+            const content = generateM3UContent();
+            const blob = new Blob([content], { type: 'application/x-mpegurl' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'master-playlist.m3u8';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showAlert('M3U8 file downloaded successfully!', 'success');
+        }
+        
+        // Initialize on load
+        renderPlaylists();
+        if (playlists.length > 0 && !directLink) {
+            generateM3U8Link();
+        }
+    </script>
+</body>
+</html>
