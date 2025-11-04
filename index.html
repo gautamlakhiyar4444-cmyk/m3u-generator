@@ -120,6 +120,15 @@
             background: #c82333;
         }
         
+        .btn-warning {
+            background: #ff9800;
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            background: #e68900;
+        }
+        
         .playlist-section {
             margin-bottom: 30px;
         }
@@ -193,12 +202,30 @@
         }
         
         .master-link-display {
-            background: rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.95);
             padding: 15px;
             border-radius: 8px;
             word-break: break-all;
             margin-bottom: 15px;
             font-family: monospace;
+            color: #333;
+            font-size: 0.9em;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        
+        .link-info {
+            background: rgba(255,255,255,0.2);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
         }
         
         .stats {
@@ -245,6 +272,28 @@
             border: 1px solid #f5c6cb;
         }
         
+        .instructions {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border-left: 5px solid #2196f3;
+        }
+        
+        .instructions h3 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+        
+        .instructions ol {
+            margin-left: 20px;
+            color: #333;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+        }
+        
         @media (max-width: 768px) {
             .stats {
                 flex-direction: column;
@@ -253,192 +302,13 @@
             .header h1 {
                 font-size: 1.8em;
             }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🎵 M3U Playlist Generator</h1>
-            <p>Create and manage your master M3U playlist</p>
-        </div>
-        
-        <div class="content">
-            <div id="alert" class="alert"></div>
             
-            <div class="stats">
-                <div class="stat-card">
-                    <div class="stat-number" id="totalChannels">0</div>
-                    <div class="stat-label">Total Channels</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="totalPlaylists">0</div>
-                    <div class="stat-label">Playlists Added</div>
-                </div>
-            </div>
-            
-            <div class="input-section">
-                <h2 style="margin-bottom: 20px; color: #333;">Add M3U Link</h2>
-                <div class="input-group">
-                    <label for="channelName">Channel/Playlist Name</label>
-                    <input type="text" id="channelName" placeholder="e.g., Sports Channels, Movies, etc.">
-                </div>
-                <div class="input-group">
-                    <label for="m3uUrl">M3U URL</label>
-                    <input type="url" id="m3uUrl" placeholder="https://example.com/playlist.m3u">
-                </div>
-                <button class="btn btn-primary" onclick="addM3ULink()">➕ Add to Playlist</button>
-            </div>
-            
-            <div class="playlist-section">
-                <h2>📋 Your Playlists</h2>
-                <div class="playlist-items" id="playlistItems">
-                    <div class="empty-state">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
-                        </svg>
-                        <p>No playlists added yet. Add your first M3U link above!</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="master-link-section" id="masterLinkSection" style="display: none;">
-                <h3>🔗 Your Master M3U Link</h3>
-                <div class="master-link-display" id="masterLinkDisplay"></div>
-                <button class="btn btn-success" onclick="downloadM3U()">⬇️ Download M3U File</button>
-                <button class="btn btn-success" onclick="copyMasterLink()" style="margin-left: 10px;">📋 Copy Link</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        let playlists = JSON.parse(localStorage.getItem('m3uPlaylists')) || [];
-        
-        function showAlert(message, type) {
-            const alert = document.getElementById('alert');
-            alert.className = `alert alert-${type}`;
-            alert.textContent = message;
-            alert.style.display = 'block';
-            setTimeout(() => {
-                alert.style.display = 'none';
-            }, 3000);
-        }
-        
-        function addM3ULink() {
-            const name = document.getElementById('channelName').value.trim();
-            const url = document.getElementById('m3uUrl').value.trim();
-            
-            if (!name || !url) {
-                showAlert('Please fill in both fields', 'error');
-                return;
+            .button-group {
+                flex-direction: column;
             }
             
-            if (!url.match(/^https?:\/\/.+/)) {
-                showAlert('Please enter a valid URL', 'error');
-                return;
-            }
-            
-            playlists.push({
-                id: Date.now(),
-                name: name,
-                url: url
-            });
-            
-            localStorage.setItem('m3uPlaylists', JSON.stringify(playlists));
-            
-            document.getElementById('channelName').value = '';
-            document.getElementById('m3uUrl').value = '';
-            
-            showAlert('Playlist added successfully!', 'success');
-            renderPlaylists();
-        }
-        
-        function deletePlaylist(id) {
-            if (confirm('Are you sure you want to delete this playlist?')) {
-                playlists = playlists.filter(p => p.id !== id);
-                localStorage.setItem('m3uPlaylists', JSON.stringify(playlists));
-                showAlert('Playlist deleted successfully!', 'success');
-                renderPlaylists();
+            .btn {
+                width: 100%;
             }
         }
-        
-        function renderPlaylists() {
-            const container = document.getElementById('playlistItems');
-            const masterSection = document.getElementById('masterLinkSection');
-            
-            if (playlists.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
-                        </svg>
-                        <p>No playlists added yet. Add your first M3U link above!</p>
-                    </div>
-                `;
-                masterSection.style.display = 'none';
-            } else {
-                container.innerHTML = playlists.map(playlist => `
-                    <div class="playlist-item">
-                        <div class="playlist-item-info">
-                            <div class="playlist-item-name">${playlist.name}</div>
-                            <div class="playlist-item-url">${playlist.url}</div>
-                        </div>
-                        <button class="btn btn-danger" onclick="deletePlaylist(${playlist.id})">🗑️ Delete</button>
-                    </div>
-                `).join('');
-                
-                masterSection.style.display = 'block';
-                updateMasterLink();
-            }
-            
-            updateStats();
-        }
-        
-        function updateStats() {
-            document.getElementById('totalPlaylists').textContent = playlists.length;
-            document.getElementById('totalChannels').textContent = playlists.length;
-        }
-        
-        function updateMasterLink() {
-            const blob = new Blob([generateM3UContent()], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            document.getElementById('masterLinkDisplay').textContent = 'master-playlist.m3u (Click Download to get the file)';
-        }
-        
-        function generateM3UContent() {
-            let content = '#EXTM3U\n\n';
-            playlists.forEach(playlist => {
-                content += `#EXTINF:-1,${playlist.name}\n`;
-                content += `${playlist.url}\n\n`;
-            });
-            return content;
-        }
-        
-        function downloadM3U() {
-            const content = generateM3UContent();
-            const blob = new Blob([content], { type: 'application/x-mpegurl' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'master-playlist.m3u';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showAlert('M3U file downloaded successfully!', 'success');
-        }
-        
-        function copyMasterLink() {
-            const content = generateM3UContent();
-            navigator.clipboard.writeText(content).then(() => {
-                showAlert('M3U content copied to clipboard!', 'success');
-            }).catch(() => {
-                showAlert('Failed to copy to clipboard', 'error');
-            });
-        }
-        
-        // Initialize on load
-        renderPlaylists();
-    </script>
-</body>
-</html>
+    
